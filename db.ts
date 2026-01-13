@@ -1,7 +1,7 @@
 
 import { Product, Order, PromoCode, ProductType } from './types';
 
-// Railway'dagi backend manzili (Hozircha o'zingizniki bilan almashtirmasangiz ham local saqlaydi)
+// Railway backend URL - Agar ishlamasa localStorage ishlaydi
 const API_URL = 'https://tramway.proxy.rlwy.net:51584'; 
 
 export const db = {
@@ -14,6 +14,7 @@ export const db = {
       if (!res.ok) throw new Error();
       return await res.json();
     } catch (e) {
+      console.warn("API bilan ulanishda xato, local ma'lumotlar yuklanmoqda.");
       const data = localStorage.getItem('boutique_products');
       return data ? JSON.parse(data) : [];
     }
@@ -47,17 +48,17 @@ export const db = {
 
   saveOrder: async (order: Order) => {
     try {
-      await fetch(`${API_URL}/orders`, {
+      const res = await fetch(`${API_URL}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(order)
       });
+      if (!res.ok) throw new Error();
     } catch (e) {
       const orders = JSON.parse(localStorage.getItem('boutique_orders') || '[]');
       orders.push(order);
       localStorage.setItem('boutique_orders', JSON.stringify(orders));
       
-      // Local stock update
       const products = JSON.parse(localStorage.getItem('boutique_products') || '[]');
       order.items.forEach(item => {
         const p = products.find((prod: any) => prod.id === item.id);
@@ -70,6 +71,7 @@ export const db = {
   getOrders: async (): Promise<Order[]> => {
     try {
       const res = await fetch(`${API_URL}/orders`);
+      if (!res.ok) throw new Error();
       return await res.json();
     } catch (e) {
       const data = localStorage.getItem('boutique_orders');
