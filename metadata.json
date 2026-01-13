@@ -1,0 +1,8 @@
+{
+  "name": "Boutique Telegram Web App",
+  "description": "A high-end boutique application for selling and renting dresses with integrated admin management and order tracking.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}
