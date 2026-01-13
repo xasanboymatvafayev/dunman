@@ -1,77 +1,80 @@
 
 import { Product, Order, PromoCode, ProductType } from './types';
 
-const STORAGE_KEYS = {
-  PRODUCTS: 'boutique_products',
-  ORDERS: 'boutique_orders',
-  PROMOS: 'boutique_promos',
-  STATS: 'boutique_stats',
-  ADMIN_PWD: 'boutique_admin_password'
-};
+// DIQQAT: Railway'da backend'ni deploy qilganingizdan keyin ushbu URL'ni o'zgartiring
+const API_URL = 'https://sizning-backend-manzilingiz.railway.app'; 
 
 export const db = {
-  getAdminPassword: (): string => {
-    const pwd = localStorage.getItem(STORAGE_KEYS.ADMIN_PWD);
-    return pwd || 'netlify1'; // Default password as requested
+  getAdminPassword: () => localStorage.getItem('boutique_admin_password') || 'netlify1',
+  saveAdminPassword: (pwd: string) => localStorage.setItem('boutique_admin_password', pwd),
+
+  // Mahsulotlarni olish
+  getProducts: async (): Promise<Product[]> => {
+    try {
+      const res = await fetch(`${API_URL}/products`);
+      return await res.json();
+    } catch (e) {
+      // Server ulanmagan bo'lsa localStorage'dan vaqtinchalik foydalanish
+      const data = localStorage.getItem('boutique_products');
+      return data ? JSON.parse(data) : [];
+    }
   },
-  saveAdminPassword: (newPwd: string) => {
-    localStorage.setItem(STORAGE_KEYS.ADMIN_PWD, newPwd);
-  },
-  getProducts: (): Product[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-    return data ? JSON.parse(data) : [];
-  },
-  saveProduct: (product: Product) => {
-    const products = db.getProducts();
-    const index = products.findIndex(p => p.id === product.id);
-    if (index > -1) {
-      products[index] = product;
-    } else {
+
+  saveProduct: async (product: Product) => {
+    try {
+      await fetch(`${API_URL}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product)
+      });
+    } catch (e) {
+      const products = JSON.parse(localStorage.getItem('boutique_products') || '[]');
       products.push(product);
-    }
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-  },
-  deleteProduct: (id: string) => {
-    const products = db.getProducts().filter(p => p.id !== id);
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-  },
-  findProductByCode: (code: string) => {
-    return db.getProducts().find(p => p.code === code);
-  },
-  getOrders: (): Order[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.ORDERS);
-    return data ? JSON.parse(data) : [];
-  },
-  saveOrder: (order: Order) => {
-    const orders = db.getOrders();
-    orders.push(order);
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-    
-    // Update stock logic
-    const products = db.getProducts();
-    order.items.forEach(item => {
-      const pIndex = products.findIndex(p => p.id === item.id);
-      if (pIndex > -1) {
-        products[pIndex].stock -= item.quantity;
-      }
-    });
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-  },
-  confirmOrder: (orderId: string) => {
-    const orders = db.getOrders();
-    const order = orders.find(o => o.id === orderId);
-    if (order) {
-      order.status = 'CONFIRMED';
-      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+      localStorage.setItem('boutique_products', JSON.stringify(products));
     }
   },
+
+  deleteProduct: async (id: string) => {
+    try {
+      await fetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      const products = JSON.parse(localStorage.getItem('boutique_products') || '[]').filter((p: any) => p.id !== id);
+      localStorage.setItem('boutique_products', JSON.stringify(products));
+    }
+  },
+
+  saveOrder: async (order: Order) => {
+    try {
+      await fetch(`${API_URL}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(order)
+      });
+    } catch (e) {
+      const orders = JSON.parse(localStorage.getItem('boutique_orders') || '[]');
+      orders.push(order);
+      localStorage.setItem('boutique_orders', JSON.stringify(orders));
+    }
+  },
+
+  getOrders: async (): Promise<Order[]> => {
+    try {
+      const res = await fetch(`${API_URL}/orders`);
+      return await res.json();
+    } catch (e) {
+      const data = localStorage.getItem('boutique_orders');
+      return data ? JSON.parse(data) : [];
+    }
+  },
+
   getPromos: (): PromoCode[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.PROMOS);
+    const data = localStorage.getItem('boutique_promos');
     return data ? JSON.parse(data) : [];
   },
+  
   savePromo: (promo: PromoCode) => {
     const promos = db.getPromos();
     promos.push(promo);
-    localStorage.setItem(STORAGE_KEYS.PROMOS, JSON.stringify(promos));
+    localStorage.setItem('boutique_promos', JSON.stringify(promos));
   }
 };
