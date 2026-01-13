@@ -7,8 +7,8 @@ const container = document.getElementById('root');
 if (container) {
   const root = createRoot(container);
   root.render(
-    <React.Suspense fallback={<div className="flex items-center justify-center h-screen">Yuklanmoqda...</div>}>
+    <React.StrictMode>
       <App />
-    </React.Suspense>
+    </React.StrictMode>
   );
 }

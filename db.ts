@@ -1,20 +1,19 @@
 
 import { Product, Order, PromoCode, ProductType } from './types';
 
-// DIQQAT: Railway'da backend'ni deploy qilganingizdan keyin ushbu URL'ni o'zgartiring
-const API_URL = 'https://sizning-backend-manzilingiz.railway.app'; 
+// Railway'dagi backend manzili (Hozircha o'zingizniki bilan almashtirmasangiz ham local saqlaydi)
+const API_URL = 'https://tramway.proxy.rlwy.net:51584'; 
 
 export const db = {
   getAdminPassword: () => localStorage.getItem('boutique_admin_password') || 'netlify1',
   saveAdminPassword: (pwd: string) => localStorage.setItem('boutique_admin_password', pwd),
 
-  // Mahsulotlarni olish
   getProducts: async (): Promise<Product[]> => {
     try {
       const res = await fetch(`${API_URL}/products`);
+      if (!res.ok) throw new Error();
       return await res.json();
     } catch (e) {
-      // Server ulanmagan bo'lsa localStorage'dan vaqtinchalik foydalanish
       const data = localStorage.getItem('boutique_products');
       return data ? JSON.parse(data) : [];
     }
@@ -22,14 +21,17 @@ export const db = {
 
   saveProduct: async (product: Product) => {
     try {
-      await fetch(`${API_URL}/products`, {
+      const res = await fetch(`${API_URL}/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(product)
       });
+      if (!res.ok) throw new Error();
     } catch (e) {
       const products = JSON.parse(localStorage.getItem('boutique_products') || '[]');
-      products.push(product);
+      const index = products.findIndex((p: any) => p.id === product.id);
+      if (index > -1) products[index] = product;
+      else products.push(product);
       localStorage.setItem('boutique_products', JSON.stringify(products));
     }
   },
@@ -54,6 +56,14 @@ export const db = {
       const orders = JSON.parse(localStorage.getItem('boutique_orders') || '[]');
       orders.push(order);
       localStorage.setItem('boutique_orders', JSON.stringify(orders));
+      
+      // Local stock update
+      const products = JSON.parse(localStorage.getItem('boutique_products') || '[]');
+      order.items.forEach(item => {
+        const p = products.find((prod: any) => prod.id === item.id);
+        if (p) p.stock = Math.max(0, p.stock - item.quantity);
+      });
+      localStorage.setItem('boutique_products', JSON.stringify(products));
     }
   },
 
